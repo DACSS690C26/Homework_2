@@ -7,8 +7,6 @@ editor: visual
 
 ## Needed Libraries
 
-test test test
-
 ```{r}
 #| echo: false
 #| warning: false
@@ -21,8 +19,8 @@ library(igraph)
 ```{r}
 #| echo: false
 set.seed(1111)
-#The echo: false option disables the printing of code (only output is displayed).
-dataGitLink='https://github.com/DACSS-CSSmeths-summer/datafiles/raw/main/hollywood.graphml'
+
+dataGitLink='https://github.com/DACSS690C26/Homework_2/raw/main/hollywood.graphml'
 actors=read_graph(dataGitLink,format='graphml')
 #Will need to update to be from my own repo
 
