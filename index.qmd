@@ -32,37 +32,30 @@ Data was downloaded from the provided link and then re-uploaded to dedicated Git
 #| echo: false
 dataGitLink='https://github.com/DACSS690C26/Homework_2/raw/main/hollywood.graphml'
 actors=read_graph(dataGitLink,format='graphml')
-summary(actors)
+#summary(actors)
 ```
 
 ```{r}
-
-base=ggraph(graph = actors)
+#plotting the base network while distinguishing Oscar winners
+base=ggraph(graph = actors, layout = "stress")
 base + geom_node_label(aes(label = name,
                            color=as.factor(wonOscar)),
                        repel = TRUE,show.legend = F) + 
   geom_edge_link(alpha=0.1) + 
   scale_color_manual(values = c('red','blue')) +
-  labs(title = "Base Network")
+  labs(title = "Social Network of Hollywood Actors")
 #blue = yes, red = no
 ```
 
+### Calculate Centrality Measures
+
 ```{r}
 eigen=eigen_centrality (actors)$vector
-print(eigen)#influence of node in network
-```
 
-```{r}
+
 close = closeness(actors, normalized = TRUE)
-close
-```
 
-```{r}
 betw <- betweenness(actors, normalized = TRUE)
-betw
-```
-
-```{r}
 
 DFCentrality=as.data.frame(cbind(eigen,close,betw),stringsAsFactors = F)
 names(DFCentrality)=c('Eigenvector','Closeness','Betweenness')
@@ -75,6 +68,7 @@ head(DFCentrality)
 ```
 
 ```{r}
+#plot closeness by betweenness with Eigenvector denoting size
 
 ggplot(DFCentrality, aes(x=Betweenness, y=Closeness)) + 
   theme_classic() +
@@ -82,8 +76,11 @@ ggplot(DFCentrality, aes(x=Betweenness, y=Closeness)) +
 ```
 
 ```{r}
+#| message : False
+
+
 HubNodes=dplyr::slice_max(DFCentrality, order_by = Eigenvector, n = 3)$person
-HubNodes
+#HubNodes
 
 
 NodeCount=length(V(actors))
@@ -99,15 +96,16 @@ for (index in seq(1:NodeCount)){
 
 
 
-base=ggraph(graph = actors)
+base=ggraph(graph = actors, layout = "stress")
 base  + geom_node_label(aes(label = label), 
                         repel = TRUE,
                         show.legend = F,
-                        color='red') + 
-  geom_edge_link(alpha=0.1)
+                        color='black') + 
+  geom_edge_link(alpha=0.1) + 
+  geom_node_point()
 ```
 
-Communities?
+### Test for presence of Communities
 
 ```{r}
 # Generate an ensemble of 1000 rewired random networks 
@@ -119,14 +117,10 @@ random_transitivities <- replicate(replicates, {
   transitivity(RandomNet, type = "global")
 })
 mean_random_transitivities=mean(random_transitivities)
-```
 
-```{r}
 # Calculate your empirical transitivity
 empirical_transitivity <- transitivity(actors, type = "global")
-```
 
-```{r}
 ### Report
 report_table <- data.frame(
   Metric = c("Actors transitivity", "Random-network mean", "Ratio"),
