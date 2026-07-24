@@ -107,6 +107,8 @@ base  + geom_node_label(aes(label = label),
 
 ### Test for presence of Communities
 
+Calculate the Ratio between the Actors transitivity and an ensemble of random networks. We found a ratio of 1.90, which being greater than 1, indicates that a community likely exists.
+
 ```{r}
 # Generate an ensemble of 1000 rewired random networks 
 set.seed(123)
@@ -130,6 +132,10 @@ report_table <- data.frame(
 )
 knitr::kable(report_table)
 ```
+
+### Analyze Possible Communities Via Various Algorithms
+
+We tested the presence of communities within the social network via Louvain, Walk trap, Fast Greedy, Infomap, and Edge Betweenness, looking for the best algorithm.
 
 ```{r}
 # Run all five community-detection algorithms
@@ -158,47 +164,24 @@ rownames(summary_table) <- NULL
 print(summary_table)
 ```
 
+Through examining the results of the various algorithms, we can see that they are relatively similar in modularity, with Walktrap, Infomap, and Edge Betweenness resulting in modularities of approximately 0.420, while Louvain and Fast Greedy resulted in modularity scores of 0.412. Both sets of modularity scores are moderate and indicative of string partitioning. The numbers of clusters present were found to be either 2 or 3, with Walktrap, Louvain, and Fast Greedy resulting in 3 clusters while Infomap and Betweenness resulted in 2. Cluster sizes were similar across algorithms with equal cluster sizes.
+
+For our purposes, we can say that the Walktrap algorithm was the best method.
+
 ```{r}
 for (name in names(algos)) {
   memb <- membership(algos[[name]])
   attr_name <- name
   actors <- set_vertex_attr(actors, attr_name,
-                              index = names(memb),
-                              # this is important for exporting
-                              value = as.vector(memb))
+                            index = names(memb),
+                            # this is important for exporting
+                            value = as.vector(memb))
 }
-# verify new attributes
-vertex_attr_names(actors)
-```
 
-```{r}
-base=ggraph(graph = actors) +
-  geom_edge_link(alpha=0.2)
 
-base + geom_node_point(aes(color=as.factor(louvain)), 
-                       show.legend = T, size=4)+
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 max.overlaps = 50, # avoid overlap
-                 size = 2.5)
-```
 
-```{r}
-#edge betweenness plot?
-base=ggraph(graph = actors) +
-  geom_edge_link(alpha=0.2)
-
-base + geom_node_point(aes(color=as.factor(edge_betweenness)), 
-                       show.legend = T, size=4)+
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 max.overlaps = 50, # avoid overlap
-                 size = 2.5)
-```
-
-```{r}
-#edge betweenness plot?
-base=ggraph(graph = actors) +
+#walktrap
+base=ggraph(graph = actors, layout = "stress") +
   geom_edge_link(alpha=0.2)
 
 base + geom_node_point(aes(color=as.factor(walktrap)), 
@@ -206,27 +189,16 @@ base + geom_node_point(aes(color=as.factor(walktrap)),
   geom_node_text(aes(label = name), 
                  repel = TRUE, 
                  max.overlaps = 50, # avoid overlap
-                 size = 2.5)
+                 size = 2.5) +
+  labs(title = "WalkTrap Algo Plot")
 ```
 
 ```{r}
-#edge betweenness plot?
-base=ggraph(graph = actors) +
-  geom_edge_link(alpha=0.2)
+#walktrap
 
-base + geom_node_point(aes(color=as.factor(infomap)), 
-                       show.legend = T, size=4)+
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 max.overlaps = 50, # avoid overlap
-                 size = 2.5)
-```
-
-```{r}
-
-louvain_result <- algos$louvain
-memb <- membership(louvain_result)
-num_communities <- length(louvain_result)
+walktrap_result <- algos$walktrap
+memb <- membership(walktrap_result)
+num_communities <- length(walktrap_result)
 
 # comm_edges[i, j] will hold the density between community i and community j
 # (diagonal = internal density, off-diagonal = cross-community density)
@@ -270,15 +242,16 @@ ggplot(df, aes(x = factor(Community_j), y = factor(Community_i), fill = density)
 ```
 
 ```{r}
+#walktrap
 V(actors)$degree = degree(actors) # first compute node degree and assign
 ggraph(actors, layout = 'hive', 
-       axis = louvain,
+       axis = walktrap,
        sort.by = degree
 ) +   
   geom_edge_hive(color='grey80') +   
-  geom_axis_hive(aes(colour = as.factor(louvain)), 
+  geom_axis_hive(aes(colour = as.factor(walktrap)), 
                  label = F) + 
-  geom_node_point(aes(colour = as.factor(louvain))) +
+  geom_node_point(aes(colour = as.factor(walktrap))) +
   geom_node_text(aes(label = name), 
                  repel = TRUE, 
                  max.overlaps = 50, # avoid overlap
