@@ -1,7 +1,7 @@
 ---
 title: "DACSS690C Homework 2"
 author: "Patrick McGrath"
-format: html
+format: gfm
 editor: visual
 ---
 
@@ -32,7 +32,7 @@ Data was downloaded from the provided link and then re-uploaded to dedicated Git
 #| echo: false
 dataGitLink='https://github.com/DACSS690C26/Homework_2/raw/main/hollywood.graphml'
 actors=read_graph(dataGitLink,format='graphml')
-
+summary(actors)
 ```
 
 ```{r}
