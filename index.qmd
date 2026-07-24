@@ -5,38 +5,45 @@ format: html
 editor: visual
 ---
 
-## Needed Libraries
+## Objective
+
+The goal of this assignment is to examine the social network of Hollywood Actors.
 
 ```{r}
 #| echo: false
 #| warning: false
 #| message: false
+
+#load needed libraries and set random seed
 library(igraph)
+library(ggraph)
+library(ggplot2)
+library(reshape2)
+
+#seed
+set.seed(1111)
 ```
 
 ## Data
 
+Data was downloaded from the provided link and then re-uploaded to dedicated Github for this assignment
+
 ```{r}
 #| echo: false
-set.seed(1111)
-
 dataGitLink='https://github.com/DACSS690C26/Homework_2/raw/main/hollywood.graphml'
 actors=read_graph(dataGitLink,format='graphml')
-#Will need to update to be from my own repo
 
-summary(actors)
-#5 attributes
 ```
 
 ```{r}
-library(ggraph)
 
 base=ggraph(graph = actors)
 base + geom_node_label(aes(label = name,
                            color=as.factor(wonOscar)),
                        repel = TRUE,show.legend = F) + 
   geom_edge_link(alpha=0.1) + 
-  scale_color_manual(values = c('red','blue'))
+  scale_color_manual(values = c('red','blue')) +
+  labs(title = "Base Network")
 #blue = yes, red = no
 ```
 
@@ -68,7 +75,7 @@ head(DFCentrality)
 ```
 
 ```{r}
-library(ggplot2)
+
 ggplot(DFCentrality, aes(x=Betweenness, y=Closeness)) + 
   theme_classic() +
   geom_text(aes(label=person,size=Eigenvector),show.legend = T,alpha=0.5) 
@@ -131,8 +138,6 @@ knitr::kable(report_table)
 ```
 
 ```{r}
-library(igraph)
-
 # Run all five community-detection algorithms
 algos <- list(
   louvain          =  { set.seed(123); cluster_louvain(actors) },
@@ -224,7 +229,6 @@ base + geom_node_point(aes(color=as.factor(infomap)),
 ```
 
 ```{r}
-library(reshape2)
 
 louvain_result <- algos$louvain
 memb <- membership(louvain_result)
