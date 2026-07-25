@@ -11,22 +11,24 @@ Hollywood Actors.
 Data was downloaded from the provided link and then re-uploaded to
 dedicated Github for this assignment
 
-    IGRAPH 2be31ce UNW- 11 14 -- 
-    + attr: wonOscar (v/n), color (v/c), name (v/c), id (v/c), weight (e/n)
-
 ``` r
-base=ggraph(graph = actors)
+dataGitLink='https://github.com/DACSS690C26/Homework_2/raw/main/hollywood.graphml'
+actors=read_graph(dataGitLink,format='graphml')
+#summary(actors)
 ```
 
-    Using "stress" as default layout
+The file includes data on 11 actors, all men, with the majority having
+won oscars in the past.
 
 ``` r
+#plotting the base network while distinguishing Oscar winners
+base=ggraph(graph = actors, layout = "stress")
 base + geom_node_label(aes(label = name,
                            color=as.factor(wonOscar)),
                        repel = TRUE,show.legend = F) + 
   geom_edge_link(alpha=0.1) + 
   scale_color_manual(values = c('red','blue')) +
-  labs(title = "Base Network")
+  labs(title = "Social Network of Hollywood Actors")
 ```
 
 ![](index_files/figure-commonmark/unnamed-chunk-3-1.png)
@@ -35,43 +37,20 @@ base + geom_node_label(aes(label = name,
 #blue = yes, red = no
 ```
 
+### Calculate Centrality Measures
+
+Measures of centrality were calculated, including eigen centrality,
+closeness, and betweenness. These values were then used to determine the
+hubs of the network, namely Pacino, De Niro, and Williams.
+
 ``` r
 eigen=eigen_centrality (actors)$vector
-print(eigen)#influence of node in network
-```
 
-       Robin Williams         Tom Hardy    Dustin Hoffman Leonardo DiCaprio 
-          0.606705039       0.014699527       0.034689773       0.037143649 
-            Tom Hanks         Al Pacino    Morgan Freeman    Robert De Niro 
-          0.072098921       1.000000000       0.007860685       1.000000000 
-           Matt Damon    Jack Nicholson    Christian Bale 
-          0.188206119       0.012477963       0.015873210 
 
-``` r
 close = closeness(actors, normalized = TRUE)
-close
-```
 
-       Robin Williams         Tom Hardy    Dustin Hoffman Leonardo DiCaprio 
-            0.3571429         0.3703704         0.4545455         0.4761905 
-            Tom Hanks         Al Pacino    Morgan Freeman    Robert De Niro 
-            0.5000000         0.2702703         0.3125000         0.2702703 
-           Matt Damon    Jack Nicholson    Christian Bale 
-            0.4347826         0.3703704         0.3846154 
-
-``` r
 betw <- betweenness(actors, normalized = TRUE)
-betw
-```
 
-       Robin Williams         Tom Hardy    Dustin Hoffman Leonardo DiCaprio 
-           0.37777778        0.01111111        0.17777778        0.33333333 
-            Tom Hanks         Al Pacino    Morgan Freeman    Robert De Niro 
-           0.53333333        0.00000000        0.02222222        0.00000000 
-           Matt Damon    Jack Nicholson    Christian Bale 
-           0.46666667        0.07777778        0.11111111 
-
-``` r
 DFCentrality=as.data.frame(cbind(eigen,close,betw),stringsAsFactors = F)
 names(DFCentrality)=c('Eigenvector','Closeness','Betweenness')
 
@@ -91,21 +70,25 @@ head(DFCentrality)
     6  1.00000000 0.2702703  0.00000000         Al Pacino
 
 ``` r
+#plot closeness by betweenness with Eigenvector denoting size
+
 ggplot(DFCentrality, aes(x=Betweenness, y=Closeness)) + 
   theme_classic() +
-  geom_text(aes(label=person,size=Eigenvector),show.legend = T,alpha=0.5) 
+  geom_text(aes(label=person,size=Eigenvector),show.legend = T,alpha=0.5) +
+  labs(title = "Actor Hubs of the Network",
+       subtitle = "Pacino, De Niro, and Williams all stand out as Actor Node Hubs")
 ```
 
-![](index_files/figure-commonmark/unnamed-chunk-8-1.png)
+![](index_files/figure-commonmark/unnamed-chunk-5-1.png)
+
+In looking at the Hub nodes, we can see they are all located in a
+specific region of the network.
 
 ``` r
 HubNodes=dplyr::slice_max(DFCentrality, order_by = Eigenvector, n = 3)$person
-HubNodes
-```
+#HubNodes
 
-    [1] "Al Pacino"      "Robert De Niro" "Robin Williams"
 
-``` r
 NodeCount=length(V(actors))
 
 V(actors)$label=''
@@ -119,22 +102,24 @@ for (index in seq(1:NodeCount)){
 
 
 
-base=ggraph(graph = actors)
-```
-
-    Using "stress" as default layout
-
-``` r
+base=ggraph(graph = actors, layout = "stress")
 base  + geom_node_label(aes(label = label), 
                         repel = TRUE,
                         show.legend = F,
-                        color='red') + 
-  geom_edge_link(alpha=0.1)
+                        color='black') + 
+  geom_edge_link(alpha=0.1) + 
+  geom_node_point()
 ```
 
-![](index_files/figure-commonmark/unnamed-chunk-9-1.png)
+![](index_files/figure-commonmark/message%20-%20False-1.png)
 
-Communities?
+### Test for presence of Communities
+
+To test for the presence of communities within the network, we calculate
+the Ratio between the Actors transitivity and an ensemble of random
+networks. We found a ratio of 1.90, which being greater than 1,
+indicates that a community likely exists, warranting further
+examination.
 
 ``` r
 # Generate an ensemble of 1000 rewired random networks 
@@ -146,14 +131,10 @@ random_transitivities <- replicate(replicates, {
   transitivity(RandomNet, type = "global")
 })
 mean_random_transitivities=mean(random_transitivities)
-```
 
-``` r
 # Calculate your empirical transitivity
 empirical_transitivity <- transitivity(actors, type = "global")
-```
 
-``` r
 ### Report
 report_table <- data.frame(
   Metric = c("Actors transitivity", "Random-network mean", "Ratio"),
@@ -169,6 +150,12 @@ knitr::kable(report_table)
 | Actors transitivity | 0.2500 |
 | Random-network mean | 0.1310 |
 | Ratio               | 1.9084 |
+
+### Analyze Possible Communities Via Various Algorithms
+
+We tested the presence of communities within the social network via
+Louvain, Walk trap, Fast Greedy, Infomap, and Edge Betweenness, looking
+for the best algorithm.
 
 ``` r
 # Run all five community-detection algorithms
@@ -209,164 +196,51 @@ print(summary_table)
     4          louvain          3    0.4121094       4, 4, 3
     5      fast_greedy          3    0.4121094       4, 4, 3
 
+Through examining the results of the various algorithms, we can see that
+they are relatively similar in modularity, with Walktrap, Infomap, and
+Edge Betweenness resulting in modularities of approximately 0.420, while
+Louvain and Fast Greedy resulted in modularity scores of 0.412. Both
+sets of modularity scores are moderate and indicative of string
+partitioning. The numbers of clusters present were found to be either 2
+or 3, with Walktrap, Louvain, and Fast Greedy resulting in 3 clusters
+while Infomap and Betweenness resulted in 2. Cluster sizes were similar
+across algorithms with equal cluster sizes.
+
+For our purposes, we can say that the Walktrap algorithm was the best
+method.
+
 ``` r
 for (name in names(algos)) {
   memb <- membership(algos[[name]])
   attr_name <- name
   actors <- set_vertex_attr(actors, attr_name,
-                              index = names(memb),
-                              # this is important for exporting
-                              value = as.vector(memb))
+                            index = names(memb),
+                            # this is important for exporting
+                            value = as.vector(memb))
 }
-# verify new attributes
-vertex_attr_names(actors)
-```
 
-     [1] "wonOscar"         "color"            "name"             "id"              
-     [5] "label"            "louvain"          "walktrap"         "fast_greedy"     
-     [9] "infomap"          "edge_betweenness"
 
-``` r
-base=ggraph(graph = actors) +
+
+#walktrap
+base=ggraph(graph = actors, layout = "stress") +
   geom_edge_link(alpha=0.2)
-```
 
-    Using "stress" as default layout
-
-``` r
-base + geom_node_point(aes(color=as.factor(louvain)), 
-                       show.legend = T, size=4)+
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 max.overlaps = 50, # avoid overlap
-                 size = 2.5)
-```
-
-![](index_files/figure-commonmark/unnamed-chunk-15-1.png)
-
-``` r
-#edge betweenness plot?
-base=ggraph(graph = actors) +
-  geom_edge_link(alpha=0.2)
-```
-
-    Using "stress" as default layout
-
-``` r
-base + geom_node_point(aes(color=as.factor(edge_betweenness)), 
-                       show.legend = T, size=4)+
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 max.overlaps = 50, # avoid overlap
-                 size = 2.5)
-```
-
-![](index_files/figure-commonmark/unnamed-chunk-16-1.png)
-
-``` r
-#edge betweenness plot?
-base=ggraph(graph = actors) +
-  geom_edge_link(alpha=0.2)
-```
-
-    Using "stress" as default layout
-
-``` r
 base + geom_node_point(aes(color=as.factor(walktrap)), 
                        show.legend = T, size=4)+
   geom_node_text(aes(label = name), 
                  repel = TRUE, 
                  max.overlaps = 50, # avoid overlap
-                 size = 2.5)
-```
-
-![](index_files/figure-commonmark/unnamed-chunk-17-1.png)
-
-``` r
-#edge betweenness plot?
-base=ggraph(graph = actors) +
-  geom_edge_link(alpha=0.2)
-```
-
-    Using "stress" as default layout
-
-``` r
-base + geom_node_point(aes(color=as.factor(infomap)), 
-                       show.legend = T, size=4)+
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 max.overlaps = 50, # avoid overlap
-                 size = 2.5)
-```
-
-![](index_files/figure-commonmark/unnamed-chunk-18-1.png)
-
-``` r
-louvain_result <- algos$louvain
-memb <- membership(louvain_result)
-num_communities <- length(louvain_result)
-
-# comm_edges[i, j] will hold the density between community i and community j
-# (diagonal = internal density, off-diagonal = cross-community density)
-comm_edges <- matrix(0, nrow = num_communities, ncol = num_communities)
-
-for (i in 1:num_communities) {
-  for (j in 1:num_communities) {
-    if (i == j) {
-      # Internal density of a community -- edge_density() correctly uses
-      # 2*edges / (n*(n-1)), no manual formula needed
-      sub <- induced_subgraph(actors, which(memb == i))
-      comm_edges[i, j] <- edge_density(sub)
-    } else {
-      # Cross density: edges crossing between community i and community j,
-      # divided by every possible pair between the two groups
-      nodes_i <- which(memb == i)
-      nodes_j <- which(memb == j)
-      el <- as_edgelist(actors, names = FALSE)
-      boundary <- sum((el[,1] %in% nodes_i & el[,2] %in% nodes_j) |
-                        (el[,1] %in% nodes_j & el[,2] %in% nodes_i))
-      possible <- length(nodes_i) * length(nodes_j)
-      comm_edges[i, j] <- boundary / possible
-    }
-  }
-}
-
-# Plot the density matrix as a heatmap; diagonal cells are internal density,
-# off-diagonal cells show how "leaky" the boundary is between each pair
-dimnames(comm_edges) <- list(1:num_communities, 1:num_communities)
-df <- melt(comm_edges, varnames = c("Community_i", "Community_j"), value.name = "density")
-
-ggplot(df, aes(x = factor(Community_j), y = factor(Community_i), fill = density)) +
-  geom_tile(color = "white") +
-  geom_text(aes(label = sprintf("%.3f", density)), size = 4) +
-  scale_fill_gradient(low = "#FFFFB2", high = "#BD0026", name = "Edge\ndensity") +
-  scale_y_discrete(limits = rev) +
-  coord_equal() +
-  labs(title = "Edge density between communities", x = "Community", y = "Community") +
-  theme_minimal(base_size = 12) +
-  theme(panel.grid = element_blank())
-```
-
-![](index_files/figure-commonmark/unnamed-chunk-19-1.png)
-
-``` r
-V(actors)$degree = degree(actors) # first compute node degree and assign
-ggraph(actors, layout = 'hive', 
-       axis = louvain,
-       sort.by = degree
-) +   
-  geom_edge_hive(color='grey80') +   
-  geom_axis_hive(aes(colour = as.factor(louvain)), 
-                 label = F) + 
-  geom_node_point(aes(colour = as.factor(louvain))) +
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 max.overlaps = 50, # avoid overlap
                  size = 2.5) +
-  coord_fixed()
+  labs(title = "WalkTrap Algo Plot",
+       subtitle = "Three Communities can be identified via the Walktrap Algorithm")
 ```
 
-![](index_files/figure-commonmark/unnamed-chunk-20-1.png)
+![](index_files/figure-commonmark/unnamed-chunk-8-1.png)
+
+Looking at the final graph of the network, we can see the WalkTrap
+algorithm highlighted three distinct communities. The largest being
+comprised of 6 nodes, with the others being comprised of 2 nodes and 3
+nodes, respectively.
 
 ``` r
 null_mean <- mean(random_transitivities)
@@ -388,3 +262,8 @@ knitr::kable(test_table)
 |------:|--------:|:-----------------|:----------------|
 |  0.05 |   1.097 | 0.278 (278/1000) | NOT significant |
 |  0.01 |   1.097 | 0.278 (278/1000) | NOT significant |
+
+The transitivity test came back non-significant with a p-value of 0.278,
+far above either threshold. This indicates that the analysis does not
+support the existence of a true community structure based on the data
+provided.

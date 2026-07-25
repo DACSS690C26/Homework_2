@@ -29,11 +29,12 @@ set.seed(1111)
 Data was downloaded from the provided link and then re-uploaded to dedicated Github for this assignment
 
 ```{r}
-#| echo: false
 dataGitLink='https://github.com/DACSS690C26/Homework_2/raw/main/hollywood.graphml'
 actors=read_graph(dataGitLink,format='graphml')
 #summary(actors)
 ```
+
+The file includes data on 11 actors, all men, with the majority having won oscars in the past.
 
 ```{r}
 #plotting the base network while distinguishing Oscar winners
@@ -48,6 +49,8 @@ base + geom_node_label(aes(label = name,
 ```
 
 ### Calculate Centrality Measures
+
+Measures of centrality were calculated, including eigen centrality, closeness, and betweenness. These values were then used to determine the hubs of the network, namely Pacino, De Niro, and Williams.
 
 ```{r}
 eigen=eigen_centrality (actors)$vector
@@ -72,13 +75,15 @@ head(DFCentrality)
 
 ggplot(DFCentrality, aes(x=Betweenness, y=Closeness)) + 
   theme_classic() +
-  geom_text(aes(label=person,size=Eigenvector),show.legend = T,alpha=0.5) 
+  geom_text(aes(label=person,size=Eigenvector),show.legend = T,alpha=0.5) +
+  labs(title = "Actor Hubs of the Network",
+       subtitle = "Pacino, De Niro, and Williams all stand out as Actor Node Hubs")
 ```
+
+In looking at the Hub nodes, we can see they are all located in a specific region of the network.
 
 ```{r}
 #| message : False
-
-
 HubNodes=dplyr::slice_max(DFCentrality, order_by = Eigenvector, n = 3)$person
 #HubNodes
 
@@ -107,7 +112,7 @@ base  + geom_node_label(aes(label = label),
 
 ### Test for presence of Communities
 
-Calculate the Ratio between the Actors transitivity and an ensemble of random networks. We found a ratio of 1.90, which being greater than 1, indicates that a community likely exists.
+To test for the presence of communities within the network, we calculate the Ratio between the Actors transitivity and an ensemble of random networks. We found a ratio of 1.90, which being greater than 1, indicates that a community likely exists, warranting further examination.
 
 ```{r}
 # Generate an ensemble of 1000 rewired random networks 
@@ -190,74 +195,11 @@ base + geom_node_point(aes(color=as.factor(walktrap)),
                  repel = TRUE, 
                  max.overlaps = 50, # avoid overlap
                  size = 2.5) +
-  labs(title = "WalkTrap Algo Plot")
+  labs(title = "WalkTrap Algo Plot",
+       subtitle = "Three Communities can be identified via the Walktrap Algorithm")
 ```
 
-```{r}
-#walktrap
-
-walktrap_result <- algos$walktrap
-memb <- membership(walktrap_result)
-num_communities <- length(walktrap_result)
-
-# comm_edges[i, j] will hold the density between community i and community j
-# (diagonal = internal density, off-diagonal = cross-community density)
-comm_edges <- matrix(0, nrow = num_communities, ncol = num_communities)
-
-for (i in 1:num_communities) {
-  for (j in 1:num_communities) {
-    if (i == j) {
-      # Internal density of a community -- edge_density() correctly uses
-      # 2*edges / (n*(n-1)), no manual formula needed
-      sub <- induced_subgraph(actors, which(memb == i))
-      comm_edges[i, j] <- edge_density(sub)
-    } else {
-      # Cross density: edges crossing between community i and community j,
-      # divided by every possible pair between the two groups
-      nodes_i <- which(memb == i)
-      nodes_j <- which(memb == j)
-      el <- as_edgelist(actors, names = FALSE)
-      boundary <- sum((el[,1] %in% nodes_i & el[,2] %in% nodes_j) |
-                        (el[,1] %in% nodes_j & el[,2] %in% nodes_i))
-      possible <- length(nodes_i) * length(nodes_j)
-      comm_edges[i, j] <- boundary / possible
-    }
-  }
-}
-
-# Plot the density matrix as a heatmap; diagonal cells are internal density,
-# off-diagonal cells show how "leaky" the boundary is between each pair
-dimnames(comm_edges) <- list(1:num_communities, 1:num_communities)
-df <- melt(comm_edges, varnames = c("Community_i", "Community_j"), value.name = "density")
-
-ggplot(df, aes(x = factor(Community_j), y = factor(Community_i), fill = density)) +
-  geom_tile(color = "white") +
-  geom_text(aes(label = sprintf("%.3f", density)), size = 4) +
-  scale_fill_gradient(low = "#FFFFB2", high = "#BD0026", name = "Edge\ndensity") +
-  scale_y_discrete(limits = rev) +
-  coord_equal() +
-  labs(title = "Edge density between communities", x = "Community", y = "Community") +
-  theme_minimal(base_size = 12) +
-  theme(panel.grid = element_blank())
-```
-
-```{r}
-#walktrap
-V(actors)$degree = degree(actors) # first compute node degree and assign
-ggraph(actors, layout = 'hive', 
-       axis = walktrap,
-       sort.by = degree
-) +   
-  geom_edge_hive(color='grey80') +   
-  geom_axis_hive(aes(colour = as.factor(walktrap)), 
-                 label = F) + 
-  geom_node_point(aes(colour = as.factor(walktrap))) +
-  geom_node_text(aes(label = name), 
-                 repel = TRUE, 
-                 max.overlaps = 50, # avoid overlap
-                 size = 2.5) +
-  coord_fixed()
-```
+Looking at the final graph of the network, we can see the WalkTrap algorithm highlighted three distinct communities. The largest being comprised of 6 nodes, with the others being comprised of 2 nodes and 3 nodes, respectively.
 
 ```{r}
 null_mean <- mean(random_transitivities)
@@ -274,3 +216,5 @@ test_table <- data.frame(
 )
 knitr::kable(test_table)
 ```
+
+The transitivity test came back non-significant with a p-value of 0.278, far above either threshold. This indicates that the analysis does not support the existence of a true community structure based on the data provided.
